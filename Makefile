@@ -14,7 +14,7 @@ CARGO        := $(RUST_PREFIX)/bin/cargo
 export CARGO_HOME
 export PATH := $(RUST_PREFIX)/bin:$(PATH)
 
-.PHONY: all build cbuild run clean install
+.PHONY: all build rsbuild run clean install
 
 all: build
 
@@ -38,14 +38,14 @@ $(RUST_PREFIX)/.installed: Cargo.toml Cargo.lock
 	"$(CARGO)" fetch --locked --manifest-path "$(CURDIR)/Cargo.toml"; \
 	touch "$@"
 
+# C implementation. Output is ./rocm-smi, same path as the Rust build.
+build: rocm-smi.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o rocm-smi rocm-smi.c $(LDFLAGS) $(LIBS)
+
 # Rust implementation. Uses only the toolchain from `make install`.
-build: $(RUST_PREFIX)/.installed
+rsbuild: $(RUST_PREFIX)/.installed
 	ROCM=$(ROCM) $(CARGO) build --offline --locked --release --manifest-path $(CURDIR)/Cargo.toml
 	cp -f target/release/rocm-smi rocm-smi
-
-# C implementation. Output is ./rocm-smi, same path as the Rust build.
-cbuild: rocm-smi.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o rocm-smi rocm-smi.c $(LDFLAGS) $(LIBS)
 
 run: build
 	./rocm-smi

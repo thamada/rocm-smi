@@ -6,7 +6,7 @@
 
 `rocm-smi` shipped with every ROCm release until 10.1.0 removed it. This program is that missing tool.
 
-It matches the ROCm System Management Interface CLI 4.x: the same flags, the same log layout, and the same concise table. The Rust sources under `src/` are the default build. `rocm-smi.c` is the C implementation of the same CLI. Telemetry and controls go through `libamd_smi`. A few values that the library does not expose are read from sysfs.
+It matches the ROCm System Management Interface CLI 4.x: the same flags, the same log layout, and the same concise table. `rocm-smi.c` is the default build. The Rust sources under `src/` are the same CLI, built with `make rsbuild`. Telemetry and controls go through `libamd_smi`. A few values that the library does not expose are read from sysfs.
 
 The reported tool version is `4.0.0+c` (`SMI_VERSION`). It is a user-space replacement for the Python `rocm-smi` front end, not a reimplementation of the kernel driver.
 
@@ -20,7 +20,7 @@ Out of scope:
 
 ```
 rocm-smi/
-├── Makefile          # `build` is Rust, `cbuild` is C; both write ./rocm-smi
+├── Makefile          # `build` is C, `rsbuild` is Rust; both write ./rocm-smi
 ├── README.md         # why this tool exists, and how to build and run it
 ├── Cargo.toml        # Rust package
 ├── build.rs          # bindgen against amd_smi/amdsmi.h
@@ -35,7 +35,7 @@ The `rocm-smi` binary is a build product and is not part of the source tree.
 
 ## Build
 
-`make install` uses `curl` to download the Rust standalone toolchain into `.rust/` and fetches crates into `.rust/cargo-home/`. `make build` depends on that install, then compiles offline with `.rust/bin/cargo` and links against AMD SMI. `make cbuild` compiles `rocm-smi.c`. The C flags below apply to `cbuild`. `ROCM` is also passed to the Rust build so bindgen and the linker use that prefix. Bindgen needs system `libclang`.
+`make build` compiles `rocm-smi.c`. `make install` uses `curl` to download the Rust standalone toolchain into `.rust/` and fetches crates into `.rust/cargo-home/`. `make rsbuild` depends on that install, then compiles offline with `.rust/bin/cargo` and links against AMD SMI. The C flags below apply to `build`. `ROCM` is also passed to the Rust build so bindgen and the linker use that prefix. Bindgen needs system `libclang`.
 
 | Variable | Default | Role |
 |----------|---------|------|
@@ -48,9 +48,9 @@ The `rocm-smi` binary is a build product and is not part of the source tree.
 
 | Target | Effect |
 |--------|--------|
+| `all` / `build` | Compile `rocm-smi.c` and write `./rocm-smi` |
 | `install` | Install Rust `1.99.0` and the crate cache under `.rust/` |
-| `all` / `build` | Install if needed, then build the Rust sources offline and write `./rocm-smi` |
-| `cbuild` | Compile `rocm-smi.c` and write `./rocm-smi` |
+| `rsbuild` | Install if needed, then build the Rust sources offline and write `./rocm-smi` |
 | `run` | `build`, then run `./rocm-smi` with no arguments (concise table) |
 | `clean` | Remove `./rocm-smi` and the Cargo `target/` directory. `.rust/` stays |
 

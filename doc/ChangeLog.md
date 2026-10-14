@@ -4,6 +4,27 @@
 >   This document is the change history. Timestamps come from the `date` command, in `YYYY-MM-DD HH:MM:SS` form.
 >   Newest entries are listed first.
 
+## 2026-10-14 19:59:27
+
+**`Makefile`** — `make build` compiles the C sources. `make rsbuild` compiles the Rust sources. Both write `./rocm-smi`.
+
+#### Background
+
+- `make build` had been the Rust build, and `make cbuild` the C build.
+- The default target should be the C implementation. The Rust build keeps its own target name.
+
+#### `Makefile`
+
+- `build` (and `all`) compiles `rocm-smi.c`.
+- `rsbuild` installs the local Rust toolchain if needed, then runs `.rust/bin/cargo` offline and copies `target/release/rocm-smi` to `./rocm-smi`.
+- `cbuild` is gone. `run` still follows `build`, so it runs the C binary.
+
+#### `README.md`, `doc/design.md`
+
+- Build instructions name `build` as C and `rsbuild` as Rust.
+
+**`doc/ChangeLog.md`**: this entry.
+
 ## 2026-10-14 18:51:13
 
 **`README.md`** — The introduction says `rocm-smi` shipped with ROCm until 10.1.0 removed it, and that losing it is a shame.
