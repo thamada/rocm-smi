@@ -1,0 +1,12 @@
+[package]
+name = "rocm-smi"
+version = "4.0.0"
+edition = "2021"
+description = "ROCm System Management Interface (Rust)"
+publish = false
+
+[dependencies]
+libc = "0.2"
+
+[build-dependencies]
+bindgen = "=0.69.4"

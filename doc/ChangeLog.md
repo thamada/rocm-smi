@@ -4,6 +4,66 @@
 >   This document is the change history. Timestamps come from the `date` command, in `YYYY-MM-DD HH:MM:SS` form.
 >   Newest entries are listed first.
 
+## 2026-10-14 18:51:13
+
+**`README.md`** — The introduction says `rocm-smi` shipped with ROCm until 10.1.0 removed it, and that losing it is a shame.
+
+#### Background
+
+- The README stated only that ROCm 10.1.0 removed the tool.
+- `rocm-smi` had been part of the ROCm package through every earlier release. The introduction should carry that history.
+
+#### `README.md`
+
+- The opening now says `rocm-smi` had always shipped with ROCm, that 10.1.0 dropping it is a shame, and that this program is that missing tool.
+
+#### `doc/design.md`
+
+- Overview records the same history.
+- The directory layout lists `README.md`.
+- The build section names `curl` as the downloader for the Rust toolchain.
+
+**`doc/ChangeLog.md`**: this entry.
+
+## 2026-10-14 18:44:18
+
+**`Makefile`** — Rust toolchain and crates install under `.rust/` via `make install`. `make build` uses that tree only.
+
+#### Background
+
+- The Rust build was using rustup under the home directory, or whichever `cargo` was on `PATH`.
+- The toolchain and the crate cache should live in the project so the build does not depend on a user-level Rust install.
+
+#### `Makefile`
+
+- `make install` downloads the Rust 1.99.0 standalone tarball for the host, installs `rustc`, `cargo`, and `rust-std` into `.rust/`, and runs `cargo fetch --locked` into `.rust/cargo-home/`.
+- `make build` depends on that install, then runs `cargo build --offline --locked --release` with `.rust/bin/cargo`.
+- `make clean` still removes `./rocm-smi` and `target/`. It does not remove `.rust/`.
+
+**`doc/ChangeLog.md`**: this entry.
+
+## 2026-10-14 18:13:20
+
+**Rust port of `rocm-smi.c`.** `make build` (and `make`) writes `./rocm-smi` from the Rust sources. `make cbuild` writes the same path from `rocm-smi.c`.
+
+#### Background
+
+- The CLI, log layout, and concise table stay the ones described in this document.
+- Both implementations link `libamd_smi` from `ROCM` and produce the binary `./rocm-smi`.
+
+#### `src/`, `Cargo.toml`, `build.rs`
+
+- Rust translation of `rocm-smi.c`. Bindings come from `amd_smi/amdsmi.h` at build time.
+- Reported tool version remains `4.0.0+c`.
+
+#### `Makefile`
+
+- `build` runs `cargo build --release` and copies `target/release/rocm-smi` to `./rocm-smi`.
+- `cbuild` is the previous gcc link of `rocm-smi.c`, still writing `./rocm-smi`.
+- `clean` also runs `cargo clean`.
+
+**`doc/ChangeLog.md`**: this entry.
+
 ## 2026-10-14 17:24:55
 
 **`rocm-smi.c`** — Concise and hardware tables build without `-Wformat-truncation`, and long partition and VBIOS strings fit in the cells.
