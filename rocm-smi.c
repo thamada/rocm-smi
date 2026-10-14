@@ -911,6 +911,26 @@ static void status_line(int dev, amdsmi_status_t st, const char *what) {
 /* show commands                                                              */
 /* -------------------------------------------------------------------------- */
 
+/* Left-align s to width and append it. Padding never exceeds the column buffer. */
+static void append_padded(char *line, size_t line_n, int width, const char *s) {
+    char col[320];
+    size_t sl = strlen(s);
+    size_t room = sizeof col - 1;
+    size_t pad = 0;
+    size_t used;
+    if (sl > room) sl = room;
+    if (width > (int)sl) {
+        pad = (size_t)width - sl;
+        if (pad > room - sl) pad = room - sl;
+    }
+    memcpy(col, s, sl);
+    if (pad) memset(col + sl, ' ', pad);
+    col[sl + pad] = 0;
+    used = strlen(line);
+    if (line_n > used + 1)
+        strncat(line, col, line_n - used - 1);
+}
+
 static void show_version(void) {
     amdsmi_version_t v;
     memset(&v, 0, sizeof v);
@@ -923,7 +943,7 @@ static void show_concise(const int *devs, int nd) {
     const char *headers[] = {"Device", "Node", "IDs", "", "Temp", "Power", "Partitions",
                              "SCLK", "MCLK", "Fan", "Perf", "PwrCap", "VRAM%", "GPU%"};
     char subs[14][64];
-    char cells[MAX_DEV][14][96];
+    char cells[MAX_DEV][14][128];
     int widths[14];
     int i, c, wsum = 0;
     char temp_label[32] = "(Edge)";
@@ -1045,30 +1065,21 @@ static void show_concise(const int *devs, int nd) {
             if ((int)strlen(hdrpad[c]) + 2 > widths[c]) widths[c] = (int)strlen(hdrpad[c]) + 2;
         }
         line[0] = 0;
-        for (c = 0; c < 14; c++) {
-            char col[128];
-            snprintf(col, sizeof col, "%-*s", widths[c], hdrpad[c]);
-            strncat(line, col, sizeof line - strlen(line) - 1);
-        }
+        for (c = 0; c < 14; c++)
+            append_padded(line, sizeof line, widths[c], hdrpad[c]);
         wsum = (int)strlen(line);
         print_spacer(HEADER, "=", wsum);
         print_spacer(" Concise Info ", "=", wsum);
         printf("%s\n", line);
         line[0] = 0;
-        for (c = 0; c < 14; c++) {
-            char col[128];
-            snprintf(col, sizeof col, "%-*s", widths[c], subs[c]);
-            strncat(line, col, sizeof line - strlen(line) - 1);
-        }
+        for (c = 0; c < 14; c++)
+            append_padded(line, sizeof line, widths[c], subs[c]);
         printf("\033[3m%s\033[0m\n", line);
         print_spacer(NULL, "=", wsum);
         for (i = 0; i < nd; i++) {
             line[0] = 0;
-            for (c = 0; c < 14; c++) {
-                char col[160];
-                snprintf(col, sizeof col, "%-*s", widths[c], cells[i][c]);
-                strncat(line, col, sizeof line - strlen(line) - 1);
-            }
+            for (c = 0; c < 14; c++)
+                append_padded(line, sizeof line, widths[c], cells[i][c]);
             printf("%s\n", line);
         }
         print_spacer(NULL, "=", wsum);
@@ -1079,7 +1090,7 @@ static void show_concise(const int *devs, int nd) {
 static void show_hw(const int *devs, int nd) {
     const char *headers[] = {"GPU", "NODE", "DID", "GUID", "GFX VER", "GFX RAS", "SDMA RAS",
                              "UMC RAS", "VBIOS", "BUS", "PARTITION ID"};
-    char cells[MAX_DEV][11][80];
+    char cells[MAX_DEV][11][AMDSMI_MAX_STRING_LENGTH];
     int widths[11];
     int i, c;
     char line[2048];
@@ -1099,46 +1110,40 @@ static void show_hw(const int *devs, int nd) {
         memset(&vb, 0, sizeof vb);
         amdsmi_get_gpu_asic_info(D(d)->h, &a);
         amdsmi_get_gpu_vbios_info(D(d)->h, &vb);
-        snprintf(cells[i][0], 80, "%d", d);
-        snprintf(cells[i][1], 80, "%u", node_id(d));
-        device_id_str(d, cells[i][2], 80);
-        guid_str(d, cells[i][3], 80);
+        snprintf(cells[i][0], sizeof cells[i][0], "%d", d);
+        snprintf(cells[i][1], sizeof cells[i][1], "%u", node_id(d));
+        device_id_str(d, cells[i][2], sizeof cells[i][2]);
+        guid_str(d, cells[i][3], sizeof cells[i][3]);
         if (a.target_graphics_version != UINT64_MAX && a.target_graphics_version != 0)
             snprintf(gfx, sizeof gfx, "gfx%" PRIx64, a.target_graphics_version);
-        snprintf(cells[i][4], 80, "%s", gfx);
+        snprintf(cells[i][4], sizeof cells[i][4], "%s", gfx);
         if (ok(amdsmi_get_gpu_ecc_status(D(d)->h, AMDSMI_GPU_BLOCK_GFX, &st)))
-            snprintf(cells[i][5], 80, "%s", ras_state_name(st));
-        else snprintf(cells[i][5], 80, "N/A");
+            snprintf(cells[i][5], sizeof cells[i][5], "%s", ras_state_name(st));
+        else snprintf(cells[i][5], sizeof cells[i][5], "N/A");
         if (ok(amdsmi_get_gpu_ecc_status(D(d)->h, AMDSMI_GPU_BLOCK_SDMA, &st)))
-            snprintf(cells[i][6], 80, "%s", ras_state_name(st));
-        else snprintf(cells[i][6], 80, "N/A");
+            snprintf(cells[i][6], sizeof cells[i][6], "%s", ras_state_name(st));
+        else snprintf(cells[i][6], sizeof cells[i][6], "N/A");
         if (ok(amdsmi_get_gpu_ecc_status(D(d)->h, AMDSMI_GPU_BLOCK_UMC, &st)))
-            snprintf(cells[i][7], 80, "%s", ras_state_name(st));
-        else snprintf(cells[i][7], 80, "N/A");
-        snprintf(cells[i][8], 80, "%s", vbios_ver(&vb));
-        bdf_str(d, cells[i][9], 80);
-        part_id_str(d, cells[i][10], 80);
+            snprintf(cells[i][7], sizeof cells[i][7], "%s", ras_state_name(st));
+        else snprintf(cells[i][7], sizeof cells[i][7], "N/A");
+        snprintf(cells[i][8], sizeof cells[i][8], "%s", vbios_ver(&vb));
+        bdf_str(d, cells[i][9], sizeof cells[i][9]);
+        part_id_str(d, cells[i][10], sizeof cells[i][10]);
         for (c = 0; c < 11; c++) {
             int L = (int)strlen(cells[i][c]) + 2;
             if (L > widths[c]) widths[c] = L;
         }
     }
     line[0] = 0;
-    for (c = 0; c < 11; c++) {
-        char col[96];
-        snprintf(col, sizeof col, "%-*s", widths[c], headers[c]);
-        strncat(line, col, sizeof line - strlen(line) - 1);
-    }
+    for (c = 0; c < 11; c++)
+        append_padded(line, sizeof line, widths[c], headers[c]);
     wsum = (int)strlen(line);
     print_spacer(" Concise Hardware Info ", "=", wsum);
     printf("%s\n", line);
     for (i = 0; i < nd; i++) {
         line[0] = 0;
-        for (c = 0; c < 11; c++) {
-            char col[96];
-            snprintf(col, sizeof col, "%-*s", widths[c], cells[i][c]);
-            strncat(line, col, sizeof line - strlen(line) - 1);
-        }
+        for (c = 0; c < 11; c++)
+            append_padded(line, sizeof line, widths[c], cells[i][c]);
         printf("%s\n", line);
     }
     print_spacer(NULL, "=", wsum);

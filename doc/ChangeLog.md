@@ -4,6 +4,28 @@
 >   This document is the change history. Timestamps come from the `date` command, in `YYYY-MM-DD HH:MM:SS` form.
 >   Newest entries are listed first.
 
+## 2026-10-14 17:24:55
+
+**`rocm-smi.c`** — Concise and hardware tables build without `-Wformat-truncation`, and long partition and VBIOS strings fit in the cells.
+
+#### Background
+
+- `make` warned in `show_concise` and `show_hw`.
+- The partition cell was 96 bytes. `"%s, %s, %s"` with three 31-character names needs up to 98 bytes.
+- The VBIOS cell was 80 bytes. `part_number` and `version` are `AMDSMI_MAX_STRING_LENGTH` (256).
+- Column padding used `snprintf` with `%-*s` and an `int` width. The compiler treated that width as unbounded.
+
+#### `rocm-smi.c`
+
+- Concise cells are 128 bytes. Hardware cells are `AMDSMI_MAX_STRING_LENGTH`. `snprintf` sizes come from `sizeof` the destination cell.
+- `append_padded` left-aligns a column in a 320-byte buffer and appends it to the row. Padding stops at the remaining room in that buffer. The concise header, sub-header, and body, and the hardware header and body, use it.
+
+#### `doc/design.md`
+
+- Output describes the 128-byte concise cells, the 256-byte hardware cells, and the 319-character column cap. Limits lists the same truncation bounds.
+
+**`doc/ChangeLog.md`**: this entry.
+
 ## 2026-10-14 14:46:13
 
 **`rocm-smi.c` and `Makefile`** — C implementation of the ROCm SMI CLI 4.x front end, with `doc/design.md` written to match.

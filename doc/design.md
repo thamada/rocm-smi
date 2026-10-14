@@ -132,6 +132,8 @@ Printed when no show/set/reset action is requested: a bare `./rocm-smi`, or `--a
 
 Columns: Device, Node, IDs (DID, GUID), Temp, Power, Partitions (Mem, Compute, ID), SCLK, MCLK, Fan, Perf, PwrCap, VRAM%, GPU%. The sub-header row is italic (`\033[3m`). `--json` and `--csv` are rejected for this table (`NOT_SUPPORTED`, exit 1). `--showhw` uses the same rejection for its hardware table.
 
+Both tables left-align columns with `append_padded`. Each column is copied into a 320-byte buffer; the text plus spaces never exceed 319 characters, then the column is appended to the row. Concise cells are 128 bytes, enough for a partition field of three 31-character names (`"%s, %s, %s"`). Hardware cells are `AMDSMI_MAX_STRING_LENGTH` (256), so a VBIOS part number or version is stored in full.
+
 ### JSON and CSV
 
 `--json` stores metric/value pairs instead of printing log lines. Objects are named `card<N>` or `system`. `json_dump` emits one JSON object of string values. Quotes and backslashes are escaped; bytes below `0x20` are dropped.
@@ -250,6 +252,8 @@ Concise output and `--showhw` refuse `--json` and `--csv`.
 ## Limits
 
 - At most 32 devices.
+- Concise table cells are truncated at 127 bytes. Hardware table cells are truncated at 255 bytes.
+- One padded table column is at most 319 characters.
 - JSON values are truncated to 511 bytes; keys to 191.
 - `--showevents` and `--showtempgraph` are foreground loops, not background monitors.
 - `--load` does not restore per-clock masks, memory overdrive, or the power profile string stored by `--save`.
